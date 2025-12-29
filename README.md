@@ -9,10 +9,14 @@ TypeScript ASTを使用してFastifyプロジェクトからエンドポイン�
 - 認証ミドルウェアの検出（preHandler, onRequest, preValidation）
 - YAML形式での構造化出力
 
-## インストール
+## ビルド
 
 ```bash
+# 依存関係インストール
 bun install
+
+# シングルバイナリにコンパイル
+bun build --compile index.ts --outfile endpoint-extractor
 ```
 
 ## 使用方法
@@ -20,7 +24,7 @@ bun install
 ### 基本
 
 ```bash
-bun run index.ts <project-path> [options]
+./endpoint-extractor <project-path> [options]
 ```
 
 ### オプション
@@ -36,16 +40,16 @@ bun run index.ts <project-path> [options]
 
 ```bash
 # 標準出力に表示
-bun run index.ts /path/to/fastify-project
+./endpoint-extractor /path/to/fastify-project
 
 # ファイルに出力
-bun run index.ts /path/to/fastify-project --output endpoints.yaml
+./endpoint-extractor /path/to/fastify-project --output endpoints.yaml
 
 # カスタム認証ミドルウェアを指定
-bun run index.ts /path/to/fastify-project --auth-middlewares tokenVerification,authGuard,adminOnly
+./endpoint-extractor /path/to/fastify-project --auth-middlewares tokenVerification,authGuard,adminOnly
 
 # 詳細ログを有効化
-bun run index.ts /path/to/fastify-project --verbose
+./endpoint-extractor /path/to/fastify-project --verbose
 ```
 
 ## 入力例
@@ -163,6 +167,14 @@ Public: 3
 
 ```bash
 bun test
+```
+
+## 開発時の実行
+
+ビルドせずに直接実行する場合：
+
+```bash
+bun run index.ts <project-path> [options]
 ```
 
 ## 今後の拡張予定
