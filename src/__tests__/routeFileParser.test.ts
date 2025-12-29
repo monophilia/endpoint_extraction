@@ -19,12 +19,14 @@ describe('RouteFileParser', () => {
     const endpoints = parser.parseFromSource(source, 'test.ts');
 
     expect(endpoints.length).toBe(1);
-    expect(endpoints[0].path).toBe('/');
-    expect(endpoints[0].method).toBe('GET');
-    expect(endpoints[0].pathParams).toEqual([]);
-    expect(endpoints[0].queryParams).toEqual([]);
-    expect(endpoints[0].bodyParams).toEqual([]);
-    expect(endpoints[0].auth.required).toBe(false);
+    const endpoint = endpoints[0];
+    expect(endpoint).toBeDefined();
+    expect(endpoint!.path).toBe('/');
+    expect(endpoint!.method).toBe('GET');
+    expect(endpoint!.pathParams).toEqual([]);
+    expect(endpoint!.queryParams).toEqual([]);
+    expect(endpoint!.bodyParams).toEqual([]);
+    expect(endpoint!.auth.required).toBe(false);
   });
 
   test('パスパラメータを含むエンドポイントを解析', () => {
@@ -42,11 +44,15 @@ describe('RouteFileParser', () => {
     const endpoints = parser.parseFromSource(source, 'test.ts');
 
     expect(endpoints.length).toBe(1);
-    expect(endpoints[0].path).toBe('/:id');
-    expect(endpoints[0].pathParams.length).toBe(1);
-    expect(endpoints[0].pathParams[0].name).toBe('id');
-    expect(endpoints[0].pathParams[0].type).toBe('string');
-    expect(endpoints[0].pathParams[0].required).toBe(true);
+    const endpoint = endpoints[0];
+    expect(endpoint).toBeDefined();
+    expect(endpoint!.path).toBe('/:id');
+    expect(endpoint!.pathParams.length).toBe(1);
+    const pathParam = endpoint!.pathParams[0];
+    expect(pathParam).toBeDefined();
+    expect(pathParam!.name).toBe('id');
+    expect(pathParam!.type).toBe('string');
+    expect(pathParam!.required).toBe(true);
   });
 
   test('認証が必要なエンドポイントを解析', () => {
@@ -65,10 +71,12 @@ describe('RouteFileParser', () => {
     const endpoints = parser.parseFromSource(source, 'test.ts');
 
     expect(endpoints.length).toBe(1);
-    expect(endpoints[0].method).toBe('POST');
-    expect(endpoints[0].auth.required).toBe(true);
-    expect(endpoints[0].auth.middlewares).toContain('tokenVerification');
-    expect(endpoints[0].auth.hookPoint).toBe('preHandler');
+    const endpoint = endpoints[0];
+    expect(endpoint).toBeDefined();
+    expect(endpoint!.method).toBe('POST');
+    expect(endpoint!.auth.required).toBe(true);
+    expect(endpoint!.auth.middlewares).toContain('tokenVerification');
+    expect(endpoint!.auth.hookPoint).toBe('preHandler');
   });
 
   test('複数のHTTPメソッドを解析', () => {
@@ -88,11 +96,16 @@ describe('RouteFileParser', () => {
     const endpoints = parser.parseFromSource(source, 'test.ts');
 
     expect(endpoints.length).toBe(5);
-    expect(endpoints[0].method).toBe('GET');
-    expect(endpoints[1].method).toBe('POST');
-    expect(endpoints[2].method).toBe('PUT');
-    expect(endpoints[3].method).toBe('DELETE');
-    expect(endpoints[4].method).toBe('PATCH');
+    expect(endpoints[0]).toBeDefined();
+    expect(endpoints[1]).toBeDefined();
+    expect(endpoints[2]).toBeDefined();
+    expect(endpoints[3]).toBeDefined();
+    expect(endpoints[4]).toBeDefined();
+    expect(endpoints[0]!.method).toBe('GET');
+    expect(endpoints[1]!.method).toBe('POST');
+    expect(endpoints[2]!.method).toBe('PUT');
+    expect(endpoints[3]!.method).toBe('DELETE');
+    expect(endpoints[4]!.method).toBe('PATCH');
   });
 
   test('行番号を正しく取得', () => {
@@ -110,7 +123,9 @@ describe('RouteFileParser', () => {
     const endpoints = parser.parseFromSource(source, 'test.ts');
 
     expect(endpoints.length).toBe(2);
-    expect(endpoints[0].lineNumber).toBe(5);
-    expect(endpoints[1].lineNumber).toBe(7);
+    expect(endpoints[0]).toBeDefined();
+    expect(endpoints[1]).toBeDefined();
+    expect(endpoints[0]!.lineNumber).toBe(5);
+    expect(endpoints[1]!.lineNumber).toBe(7);
   });
 });
