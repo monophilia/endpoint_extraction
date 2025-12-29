@@ -14,3 +14,5 @@ export { DEFAULT_AUTH_CONFIG, DEFAULT_AUTH_MIDDLEWARES, FASTIFY_AUTH_HOOKS } fro
 export type { EndpointInfo } from './endpoint';
 export type { ExtractedEndpoints, PrefixedEndpoints } from './output';
 export type { YamlEndpoint, YamlParams } from './yaml';
+
+export type { ExtractorOptions, CLIOptions } from './options';
