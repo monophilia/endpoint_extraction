@@ -18,3 +18,33 @@ export type { YamlEndpoint, YamlParams, YamlSuccessResponse, YamlErrorResponse, 
 export type { ExtractorOptions, CLIOptions } from './options';
 
 export type { ResponseSource, ResponseInfo, ErrorResponseInfo, EndpointResponses } from './response';
+
+// NestJS固有型
+export type {
+  MethodDecoratorType,
+  MethodDecoratorInfo,
+  ParamDecoratorType,
+  ParamDecoratorInfo,
+  GuardDecoratorInfo,
+  MetadataDecoratorInfo,
+  ControllerInfo,
+  ControllerMethodInfo,
+  ModuleInfo,
+  ControllerRegistration,
+  AuthGuardResult,
+  DetectedGuard,
+  EndpointAuth,
+} from './nestjs';
+export { HTTP_METHOD_MAP } from './nestjs';
+
+// 設定ファイル型
+export type {
+  ExtractorConfig,
+  CommonConfig,
+  NestJSConfig,
+  NestJSAuthConfigFile,
+  NestJSParamsConfig,
+  CustomDecoratorConfig,
+  FastifyConfig,
+  FastifyAuthConfigFile,
+} from './config';
