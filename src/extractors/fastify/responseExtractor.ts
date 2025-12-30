@@ -141,7 +141,8 @@ export class ResponseExtractor {
     // reply.send(data) パターン
     if (Node.isIdentifier(object) && object.getText() === 'reply') {
       const args = call.getArguments();
-      const dataNode = args.length > 0 ? args[0] : null;
+      const firstArg = args[0];
+      const dataNode = firstArg ?? null;
       const dataType = dataNode ? this.extractTypeFromExpression(dataNode) : [];
       return {
         code: 200,
@@ -196,7 +197,8 @@ export class ResponseExtractor {
 
     const code = parseInt(codeArg.getText(), 10);
     const sendArgs = sendCall.getArguments();
-    const dataNode = sendArgs.length > 0 ? sendArgs[0] : null;
+    const firstSendArg = sendArgs[0];
+    const dataNode = firstSendArg ?? null;
     const dataType = dataNode ? this.extractTypeFromExpression(dataNode) : [];
 
     return {

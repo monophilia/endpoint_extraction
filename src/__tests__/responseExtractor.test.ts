@@ -69,12 +69,14 @@ describe('ResponseExtractor', () => {
       const responses = extractor.extractFromHandler(handler!);
 
       expect(responses.success).toHaveLength(1);
-      expect(responses.success[0].code).toBe(200);
-      expect(responses.success[0].source).toBe('return');
-      expect(responses.success[0].dataType).toContainEqual(
+      const successResponse = responses.success[0];
+      expect(successResponse).toBeDefined();
+      expect(successResponse?.code).toBe(200);
+      expect(successResponse?.source).toBe('return');
+      expect(successResponse?.dataType).toContainEqual(
         expect.objectContaining({ name: 'users' })
       );
-      expect(responses.success[0].dataType).toContainEqual(
+      expect(successResponse?.dataType).toContainEqual(
         expect.objectContaining({ name: 'total' })
       );
     });
@@ -89,8 +91,10 @@ describe('ResponseExtractor', () => {
       const responses = extractor.extractFromHandler(handler!);
 
       expect(responses.success).toHaveLength(1);
-      expect(responses.success[0].code).toBe(200);
-      expect(responses.success[0].source).toBe('reply.send');
+      const successResponse = responses.success[0];
+      expect(successResponse).toBeDefined();
+      expect(successResponse?.code).toBe(200);
+      expect(successResponse?.source).toBe('reply.send');
     });
   });
 
@@ -103,8 +107,10 @@ describe('ResponseExtractor', () => {
       const responses = extractor.extractFromHandler(handler!);
 
       expect(responses.success).toHaveLength(1);
-      expect(responses.success[0].code).toBe(201);
-      expect(responses.success[0].source).toBe('reply.code');
+      const successResponse = responses.success[0];
+      expect(successResponse).toBeDefined();
+      expect(successResponse?.code).toBe(201);
+      expect(successResponse?.source).toBe('reply.code');
     });
 
     test('reply.code(404).send()からエラーレスポンスを抽出する', () => {
@@ -115,8 +121,10 @@ describe('ResponseExtractor', () => {
       const responses = extractor.extractFromHandler(handler!);
 
       expect(responses.errors).toHaveLength(1);
-      expect(responses.errors[0].code).toBe(404);
-      expect(responses.errors[0].message).toBe('User not found');
+      const errorResponse = responses.errors[0];
+      expect(errorResponse).toBeDefined();
+      expect(errorResponse?.code).toBe(404);
+      expect(errorResponse?.message).toBe('User not found');
     });
   });
 
@@ -129,7 +137,9 @@ describe('ResponseExtractor', () => {
       const responses = extractor.extractFromHandler(handler!);
 
       expect(responses.success).toHaveLength(1);
-      expect(responses.success[0].code).toBe(200);
+      const successResponse = responses.success[0];
+      expect(successResponse).toBeDefined();
+      expect(successResponse?.code).toBe(200);
 
       expect(responses.errors).toHaveLength(2);
       expect(responses.errors.map(e => e.code)).toContain(404);
@@ -160,8 +170,10 @@ describe('ResponseExtractor', () => {
       const responses = extractor.extractFromHandler(handler!);
 
       expect(responses.success).toHaveLength(1);
-      expect(responses.success[0].code).toBe(204);
-      expect(responses.success[0].dataType).toHaveLength(0);
+      const successResponse = responses.success[0];
+      expect(successResponse).toBeDefined();
+      expect(successResponse?.code).toBe(204);
+      expect(successResponse?.dataType).toHaveLength(0);
     });
   });
 
@@ -173,7 +185,9 @@ describe('ResponseExtractor', () => {
 
       const responses = extractor.extractFromHandler(handler!);
 
-      expect(responses.errors[0].message).toBe('User not found');
+      const errorResponse = responses.errors[0];
+      expect(errorResponse).toBeDefined();
+      expect(errorResponse?.message).toBe('User not found');
     });
   });
 });
