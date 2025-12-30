@@ -132,3 +132,54 @@ export default async function(server: FastifyInstance) {
   });
 }
 `;
+
+// Phase 3: 高度な解析用フィクスチャ
+
+export const EXTERNAL_FUNCTION_FIXTURE = `
+import { FastifyInstance, FastifyReply } from 'fastify';
+
+function sendSuccess(reply: FastifyReply, data: { id: string; name: string }) {
+  reply.code(200).send(data);
+}
+
+function sendError(reply: FastifyReply, message: string) {
+  reply.code(404).send({ error: 'NOT_FOUND', message });
+}
+
+export default async function(server: FastifyInstance) {
+  server.get('/user/:id', async (req, reply) => {
+    const user = { id: '1', name: 'Test User' };
+    if (!user) {
+      sendError(reply, 'User not found');
+      return;
+    }
+    sendSuccess(reply, user);
+  });
+}
+`;
+
+export const NESTED_EXTERNAL_FUNCTION_FIXTURE = `
+import { FastifyInstance, FastifyReply } from 'fastify';
+
+function handleSuccess(reply: FastifyReply, data: { id: string }) {
+  reply.code(200).send(data);
+}
+
+function handleError(reply: FastifyReply, code: number, message: string) {
+  reply.code(code).send({ error: 'ERROR', message });
+}
+
+function processUser(reply: FastifyReply, userId: string) {
+  if (userId === 'invalid') {
+    handleError(reply, 400, 'Invalid user ID');
+    return;
+  }
+  handleSuccess(reply, { id: userId });
+}
+
+export default async function(server: FastifyInstance) {
+  server.get('/user/:id', async (req, reply) => {
+    processUser(reply, req.params.id);
+  });
+}
+`;

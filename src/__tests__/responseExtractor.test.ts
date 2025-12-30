@@ -13,6 +13,8 @@ import {
   VARIABLE_STATUS_CODE_FIXTURE,
   VARIABLE_RESPONSE_FIXTURE,
   VARIABLE_ERROR_RESPONSE_FIXTURE,
+  EXTERNAL_FUNCTION_FIXTURE,
+  NESTED_EXTERNAL_FUNCTION_FIXTURE,
 } from './fixtures/response.fixture';
 
 /**
@@ -244,6 +246,54 @@ describe('ResponseExtractor', () => {
       expect(errorResponse).toBeDefined();
       expect(errorResponse?.code).toBe(404);
       expect(errorResponse?.message).toBe('User not found');
+    });
+  });
+
+  // Phase 3: 高度な解析（深度解析）
+  describe('高度な解析（Phase 3）', () => {
+    test('外部関数内のレスポンスを追跡する', () => {
+      const { extractor, sourceFile } = createExtractorAndHandler(EXTERNAL_FUNCTION_FIXTURE);
+      const handler = getHandlerFunction(sourceFile);
+      expect(handler).not.toBeNull();
+
+      const responses = extractor.extractFromHandler(handler!, { enableDeepAnalysis: true });
+
+      // sendSuccess(200) と sendError(404) を追跡
+      expect(responses.success.length + responses.errors.length).toBeGreaterThanOrEqual(2);
+
+      const successResponse = responses.success.find(r => r.code === 200);
+      expect(successResponse).toBeDefined();
+
+      const errorResponse = responses.errors.find(e => e.code === 404);
+      expect(errorResponse).toBeDefined();
+    });
+
+    test('ネストした外部関数を追跡する（深度制限あり）', () => {
+      const { extractor, sourceFile } = createExtractorAndHandler(NESTED_EXTERNAL_FUNCTION_FIXTURE);
+      const handler = getHandlerFunction(sourceFile);
+      expect(handler).not.toBeNull();
+
+      // 深度2で追跡: handler -> processUser -> handleSuccess/handleError
+      const responses = extractor.extractFromHandler(handler!, {
+        enableDeepAnalysis: true,
+        deepAnalysisDepth: 2,
+      });
+
+      // handleSuccess(200), handleError(400) を追跡
+      expect(responses.success.length + responses.errors.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test('深度解析が無効の場合は外部関数を追跡しない', () => {
+      const { extractor, sourceFile } = createExtractorAndHandler(EXTERNAL_FUNCTION_FIXTURE);
+      const handler = getHandlerFunction(sourceFile);
+      expect(handler).not.toBeNull();
+
+      // enableDeepAnalysis: false（デフォルト）
+      const responses = extractor.extractFromHandler(handler!);
+
+      // 外部関数は追跡しない
+      expect(responses.success).toHaveLength(0);
+      expect(responses.errors).toHaveLength(0);
     });
   });
 });
