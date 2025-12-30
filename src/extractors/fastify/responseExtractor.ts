@@ -186,16 +186,16 @@ export class ResponseExtractor {
     }
 
     const codeArgs = codeCall.getArguments();
-    if (codeArgs.length === 0) {
-      return null;
-    }
-
     const codeArg = codeArgs[0];
-    if (!Node.isNumericLiteral(codeArg)) {
+    if (!codeArg) {
       return null;
     }
 
-    const code = parseInt(codeArg.getText(), 10);
+    const code = this.resolveStatusCode(codeArg);
+    if (code === null) {
+      return null;
+    }
+
     const sendArgs = sendCall.getArguments();
     const firstSendArg = sendArgs[0];
     const dataNode = firstSendArg ?? null;
@@ -208,6 +208,50 @@ export class ResponseExtractor {
       source: 'reply.code',
       dataNode,
     };
+  }
+
+  /**
+   * ステータスコードを解決（リテラルまたは変数）
+   */
+  private resolveStatusCode(node: Node): number | null {
+    // NumericLiteral: 直接値を取得
+    if (Node.isNumericLiteral(node)) {
+      return parseInt(node.getText(), 10);
+    }
+
+    // Identifier: 変数定義を追跡
+    if (Node.isIdentifier(node)) {
+      return this.resolveVariableValue(node);
+    }
+
+    return null;
+  }
+
+  /**
+   * 変数から数値を解決（Phase 2: 変数追跡）
+   */
+  private resolveVariableValue(node: Node): number | null {
+    if (!Node.isIdentifier(node)) {
+      return null;
+    }
+
+    const definitions = node.getDefinitionNodes();
+    for (const def of definitions) {
+      if (!Node.isVariableDeclaration(def)) {
+        continue;
+      }
+
+      const initializer = def.getInitializer();
+      if (!initializer) {
+        continue;
+      }
+
+      if (Node.isNumericLiteral(initializer)) {
+        return parseInt(initializer.getText(), 10);
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -233,6 +277,12 @@ export class ResponseExtractor {
       return null;
     }
 
+    // 変数参照の場合、定義を追跡（Phase 2）
+    if (Node.isIdentifier(node)) {
+      const resolved = this.resolveVariableExpression(node);
+      return resolved ? this.extractErrorMessageFromNode(resolved) : null;
+    }
+
     if (!Node.isObjectLiteralExpression(node)) {
       return null;
     }
@@ -255,6 +305,29 @@ export class ResponseExtractor {
 
       if (Node.isStringLiteral(initializer)) {
         return initializer.getLiteralValue();
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 変数から式を解決（Phase 2: 変数追跡）
+   */
+  private resolveVariableExpression(node: Node): Node | null {
+    if (!Node.isIdentifier(node)) {
+      return null;
+    }
+
+    const definitions = node.getDefinitionNodes();
+    for (const def of definitions) {
+      if (!Node.isVariableDeclaration(def)) {
+        continue;
+      }
+
+      const initializer = def.getInitializer();
+      if (initializer) {
+        return initializer;
       }
     }
 
