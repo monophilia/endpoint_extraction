@@ -7,6 +7,9 @@ TypeScript ASTを使用してFastifyプロジェクトからエンドポイン�
 - Fastifyルート定義（`server.get/post/put/delete/patch`）の自動検出
 - ジェネリック型引数からのパラメータ情報抽出（Params, Querystring, Body）
 - 認証ミドルウェアの検出（preHandler, onRequest, preValidation）
+- レスポンス型の抽出（return文、reply.send()、reply.code().send()）
+- 変数追跡による動的なステータスコード・レスポンス解決
+- 外部関数呼び出しの追跡（deep-analysis）
 - YAML形式での構造化出力
 
 ## ビルド
@@ -35,6 +38,10 @@ bun build --compile index.ts --outfile endpoint-extractor
 | `--output <file>` | 出力ファイルパス |
 | `--verbose` | 詳細ログ出力 |
 | `--auth-middlewares <list>` | 認証ミドルウェア名（カンマ区切り） |
+| `--extract-responses` | レスポンス型を抽出（デフォルト: false） |
+| `--response-depth <n>` | レスポンス抽出の最大深度（デフォルト: 3） |
+| `--deep-analysis` | 外部関数の追跡を有効化 |
+| `--deep-analysis-depth <n>` | 外部関数追跡の最大深度（デフォルト: 3） |
 
 ### 例
 
@@ -50,6 +57,15 @@ bun build --compile index.ts --outfile endpoint-extractor
 
 # 詳細ログを有効化
 ./endpoint-extractor /path/to/fastify-project --verbose
+
+# レスポンス型を抽出
+./endpoint-extractor /path/to/fastify-project --extract-responses
+
+# レスポンス型を抽出（外部関数も追跡）
+./endpoint-extractor /path/to/fastify-project --extract-responses --deep-analysis
+
+# 深度を指定してレスポンス型を抽出
+./endpoint-extractor /path/to/fastify-project --extract-responses --response-depth 2 --deep-analysis --deep-analysis-depth 5
 ```
 
 ## 入力例
@@ -130,6 +146,29 @@ _meta:
       page: number | undefined
       limit: number | undefined
     requiresAuth: false
+```
+
+### レスポンス抽出時の出力例（--extract-responses）
+
+```yaml
+/users:
+  /:id:
+    METHOD: GET
+    pathParams:
+      id: string
+    requiresAuth: false
+    responses:
+      success:
+        - code: 200
+          source: return
+          dataType:
+            id: string
+            name: string
+            email: string
+      errors:
+        - code: 404
+          message: User not found
+          dataType: {}
 ```
 
 ### CLIサマリー出力

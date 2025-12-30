@@ -6,22 +6,39 @@ import {
   Node,
   SyntaxKind,
   CallExpression,
+  ArrowFunction,
+  FunctionExpression,
 } from 'ts-morph';
-import type { EndpointInfo, HttpMethod, ParamInfo, AuthConfig } from '../../types';
+import type { EndpointInfo, HttpMethod, ParamInfo, AuthConfig, EndpointResponses } from '../../types';
 import { HTTP_METHODS, DEFAULT_AUTH_CONFIG } from '../../types';
 import { TypeExtractor } from '../../core/typeExtractor';
 import { AuthDetector } from './authDetector';
+import { ResponseExtractor } from './responseExtractor';
+
+export type RouteFileParserOptions = {
+  readonly tsconfigPath?: string;
+  readonly authConfig?: AuthConfig;
+  readonly extractResponses?: boolean;
+};
 
 export class RouteFileParser {
   private readonly project: Project;
   private readonly authDetector: AuthDetector;
+  private readonly extractResponses: boolean;
 
-  constructor(tsconfigPath?: string, authConfig: AuthConfig = DEFAULT_AUTH_CONFIG) {
+  constructor(options: RouteFileParserOptions = {}) {
+    const {
+      tsconfigPath,
+      authConfig = DEFAULT_AUTH_CONFIG,
+      extractResponses = false,
+    } = options;
+
     this.project = new Project({
       tsConfigFilePath: tsconfigPath,
       skipAddingFilesFromTsConfig: true,
     });
     this.authDetector = new AuthDetector(authConfig);
+    this.extractResponses = extractResponses;
   }
 
   parse(filePath: string): readonly EndpointInfo[] {
@@ -38,10 +55,11 @@ export class RouteFileParser {
 
   private parseSourceFile(sourceFile: SourceFile, filePath: string): readonly EndpointInfo[] {
     const typeExtractor = new TypeExtractor(sourceFile);
+    const responseExtractor = this.extractResponses ? new ResponseExtractor(sourceFile) : null;
     const methodCalls = this.findHttpMethodCalls(sourceFile);
 
     return methodCalls
-      .map(call => this.extractEndpoint(call, typeExtractor, filePath))
+      .map(call => this.extractEndpoint(call, typeExtractor, responseExtractor, filePath))
       .filter((e): e is EndpointInfo => e !== null);
   }
 
@@ -63,6 +81,7 @@ export class RouteFileParser {
   private extractEndpoint(
     call: CallExpression,
     typeExtractor: TypeExtractor,
+    responseExtractor: ResponseExtractor | null,
     filePath: string
   ): EndpointInfo | null {
     const expr = call.getExpression();
@@ -100,6 +119,10 @@ export class RouteFileParser {
 
     const auth = this.authDetector.detect(args);
 
+    const responses = responseExtractor
+      ? this.extractResponses_(call, args, responseExtractor)
+      : undefined;
+
     return {
       path: routePath,
       method,
@@ -109,7 +132,35 @@ export class RouteFileParser {
       auth,
       sourceFile: filePath,
       lineNumber: call.getStartLineNumber(),
+      responses,
     };
+  }
+
+  private extractResponses_(
+    call: CallExpression,
+    args: readonly Node[],
+    responseExtractor: ResponseExtractor
+  ): EndpointResponses | undefined {
+    const handler = this.getHandlerFunction(args);
+    if (!handler) {
+      return undefined;
+    }
+    return responseExtractor.extractFromHandler(handler);
+  }
+
+  private getHandlerFunction(args: readonly Node[]): ArrowFunction | FunctionExpression | null {
+    if (args.length === 0) {
+      return null;
+    }
+
+    const lastArg = args[args.length - 1];
+    if (Node.isArrowFunction(lastArg)) {
+      return lastArg;
+    }
+    if (Node.isFunctionExpression(lastArg)) {
+      return lastArg;
+    }
+    return null;
   }
 
   private toHttpMethod(method: string): HttpMethod | null {

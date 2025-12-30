@@ -42,7 +42,11 @@ export class FastifyExtractor implements EndpointExtractor {
     }
 
     // 各ルートファイルを解析
-    const routeParser = new RouteFileParser(fullTsconfigPath, authConfig);
+    const routeParser = new RouteFileParser({
+      tsconfigPath: fullTsconfigPath,
+      authConfig,
+      extractResponses: options.extractResponses,
+    });
 
     const routes = registrations.map(reg => {
       if (verbose) {

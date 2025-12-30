@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 .vite/
 
 .env*
+endpoint-extractor
+*.yaml
+*.yml

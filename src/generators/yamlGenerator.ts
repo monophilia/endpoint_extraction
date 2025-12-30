@@ -7,6 +7,8 @@ import type {
   ParamInfo,
   YamlEndpoint,
   YamlParams,
+  YamlResponses,
+  EndpointResponses,
 } from '../types';
 
 export class YamlGenerator {
@@ -75,11 +77,62 @@ export class YamlGenerator {
       ? { ...withQueryParams, bodyParams: this.buildYamlParams(endpoint.bodyParams) }
       : withQueryParams;
 
-    const result = endpoint.auth.middlewares.length > 0
+    const withAuthMiddlewares = endpoint.auth.middlewares.length > 0
       ? { ...withBodyParams, authMiddlewares: endpoint.auth.middlewares }
       : withBodyParams;
 
+    const responses = endpoint.responses
+      ? this.buildYamlResponses(endpoint.responses)
+      : undefined;
+
+    const result = responses
+      ? { ...withAuthMiddlewares, responses }
+      : withAuthMiddlewares;
+
     return result;
+  }
+
+  private buildYamlResponses(responses: EndpointResponses): YamlResponses | undefined {
+    if (responses.success.length === 0 && responses.errors.length === 0) {
+      return undefined;
+    }
+
+    const successResponse = responses.success[0];
+    const hasSuccess = responses.success.length > 0 && successResponse;
+    const hasErrors = responses.errors.length > 0;
+
+    if (!hasSuccess && !hasErrors) {
+      return undefined;
+    }
+
+    if (hasSuccess && hasErrors) {
+      return {
+        success: {
+          code: successResponse.code,
+          dataType: this.buildYamlParams(successResponse.dataType),
+        },
+        errors: responses.errors.map(error => ({
+          code: error.code,
+          message: error.message,
+        })),
+      };
+    }
+
+    if (hasSuccess) {
+      return {
+        success: {
+          code: successResponse.code,
+          dataType: this.buildYamlParams(successResponse.dataType),
+        },
+      };
+    }
+
+    return {
+      errors: responses.errors.map(error => ({
+        code: error.code,
+        message: error.message,
+      })),
+    };
   }
 
   private buildYamlParams(params: readonly ParamInfo[]): YamlParams {

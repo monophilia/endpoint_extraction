@@ -14,7 +14,7 @@ async function main() {
   }
 
   const options = parseArgs(args);
-  const { projectRoot, verbose, outputPath, authConfig } = options;
+  const { projectRoot, verbose, outputPath, authConfig, extractResponses, responseDepthLimit, deepAnalysis, deepAnalysisDepth } = options;
 
   try {
     // 現時点ではFastifyExtractorのみ
@@ -29,6 +29,10 @@ async function main() {
       projectRoot,
       authConfig,
       verbose,
+      extractResponses,
+      responseDepthLimit,
+      deepAnalysis,
+      deepAnalysisDepth,
     });
 
     // YAML出力
@@ -76,6 +80,10 @@ function parseArgs(args: string[]): CLIOptions {
       outputPath?: string;
       verbose?: boolean;
       authConfig?: AuthConfig;
+      extractResponses?: boolean;
+      responseDepthLimit?: number;
+      deepAnalysis?: boolean;
+      deepAnalysisDepth?: number;
     }
   ): typeof acc => {
     if (index >= args.length) {
@@ -126,6 +134,44 @@ function parseArgs(args: string[]): CLIOptions {
           },
         });
       }
+      case '--extract-responses':
+        return parseArgsRecursive(index + 1, {
+          ...acc,
+          extractResponses: true,
+        });
+      case '--response-depth': {
+        const depthValue = args[index + 1];
+        if (!depthValue) {
+          throw new Error('--response-depth requires a value');
+        }
+        const depth = parseInt(depthValue, 10);
+        if (Number.isNaN(depth) || depth < 1) {
+          throw new Error('--response-depth requires a positive integer');
+        }
+        return parseArgsRecursive(index + 2, {
+          ...acc,
+          responseDepthLimit: depth,
+        });
+      }
+      case '--deep-analysis':
+        return parseArgsRecursive(index + 1, {
+          ...acc,
+          deepAnalysis: true,
+        });
+      case '--deep-analysis-depth': {
+        const depthValue = args[index + 1];
+        if (!depthValue) {
+          throw new Error('--deep-analysis-depth requires a value');
+        }
+        const depth = parseInt(depthValue, 10);
+        if (Number.isNaN(depth) || depth < 1) {
+          throw new Error('--deep-analysis-depth requires a positive integer');
+        }
+        return parseArgsRecursive(index + 2, {
+          ...acc,
+          deepAnalysisDepth: depth,
+        });
+      }
       default:
         return parseArgsRecursive(index + 1, acc);
     }
@@ -139,15 +185,22 @@ function printUsage() {
 Usage: bun run index.ts <project-path> [options]
 
 Options:
-  --framework <name>         Specify framework (fastify, nestjs, express)
-  --output <file>            Output file path
-  --verbose                  Enable verbose logging
-  --auth-middlewares <list>  Comma-separated auth middleware names
+  --framework <name>           Specify framework (fastify, nestjs, express)
+  --output <file>              Output file path
+  --verbose                    Enable verbose logging
+  --auth-middlewares <list>    Comma-separated auth middleware names
+  --extract-responses          Extract response types (default: false)
+  --response-depth <n>         Max depth for response extraction (default: 3)
+  --deep-analysis              Enable deep analysis for external functions
+  --deep-analysis-depth <n>    Max depth for deep analysis (default: 3)
 
 Examples:
   bun run index.ts /path/to/project
   bun run index.ts /path/to/project --framework fastify
   bun run index.ts /path/to/project --auth-middlewares tokenVerification,authGuard
+  bun run index.ts /path/to/project --extract-responses
+  bun run index.ts /path/to/project --extract-responses --response-depth 2
+  bun run index.ts /path/to/project --extract-responses --deep-analysis
   `);
 }
 
