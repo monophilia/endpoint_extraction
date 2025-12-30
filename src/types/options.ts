@@ -13,6 +13,8 @@ export type ExtractorOptions = {
   readonly entryFilePath?: string;
   /** tsconfigのパス（プロジェクトルートからの相対パス） */
   readonly tsconfigPath?: string;
+  /** 設定ファイルのパス */
+  readonly configPath?: string;
   /** 認証解析設定 */
   readonly authConfig?: AuthConfig;
   /** 詳細ログ出力 */

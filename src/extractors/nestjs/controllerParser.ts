@@ -6,12 +6,19 @@ import type {
   ControllerMethodInfo,
   ParamDecoratorInfo,
   MethodDecoratorType,
-  GuardDecoratorInfo,
-  MetadataDecoratorInfo,
+  EndpointAuth,
 } from '../../types/nestjs';
 import type { EndpointInfo } from '../../types/endpoint';
 import type { ParamInfo } from '../../types/param';
 import type { HttpMethod } from '../../types/http';
+import type { AuthInfo } from '../../types/auth';
+import { DecoratorParser } from './decoratorParser';
+import type { NestJSAuthDetector } from './authDetector';
+
+/**
+ * 認証検出器のインターフェース
+ */
+type AuthDetector = Pick<NestJSAuthDetector, 'detectAuth'>;
 
 /**
  * HTTPメソッドマップ（ローカル定義）
@@ -31,9 +38,11 @@ const HTTP_METHOD_MAP: Record<MethodDecoratorType, HttpMethod | 'OPTIONS' | 'HEA
  * コントローラークラスの解析を担当
  */
 export class ControllerParser {
+  private readonly decoratorParser: DecoratorParser;
   private readonly publicDecorators: readonly string[];
 
   constructor(publicDecorators: readonly string[] = ['Public', 'SkipAuth']) {
+    this.decoratorParser = new DecoratorParser();
     this.publicDecorators = publicDecorators;
   }
 
@@ -61,10 +70,12 @@ export class ControllerParser {
     classDecl: ClassDeclaration,
     sourceFilePath: string
   ): ControllerInfo {
-    // DecoratorParserは後続タスクで実装されるため、一旦仮実装
-    const basePath = this.extractControllerPath(classDecl);
-    const classGuards: GuardDecoratorInfo[] = []; // DecoratorParser実装後に対応
-    const classMetadata: MetadataDecoratorInfo[] = []; // DecoratorParser実装後に対応
+    const basePath = this.decoratorParser.parseControllerDecorator(classDecl);
+    const classGuards = this.decoratorParser.parseGuardDecorators(classDecl, 'class');
+    const classMetadata = this.decoratorParser.parseMetadataDecorators(
+      classDecl,
+      this.publicDecorators
+    );
 
     const methods = this.parseMethods(classDecl);
 
@@ -80,57 +91,42 @@ export class ControllerParser {
   }
 
   /**
-   * @Controller('path')からパスを抽出（仮実装）
-   */
-  private extractControllerPath(classDecl: ClassDeclaration): string {
-    const decorator = classDecl.getDecorator('Controller');
-    if (!decorator) {
-      return '';
-    }
-
-    const args = decorator.getArguments();
-    if (args.length === 0) {
-      return '';
-    }
-
-    const arg = args[0]!;
-    return arg.getText().replace(/['"]/g, '');
-  }
-
-  /**
    * コントローラーのメソッドを解析
    */
   private parseMethods(classDecl: ClassDeclaration): readonly ControllerMethodInfo[] {
     const methods = classDecl.getMethods();
-    const results: ControllerMethodInfo[] = [];
 
-    for (const method of methods) {
-      // DecoratorParser実装後に対応
-      // 一旦、HTTPメソッドデコレーターを持つメソッドをスキップ
-      // 将来的にはdecoratorParser.parseMethodDecorator(method)で実装
+    return methods
+      .map(method => {
+        const httpMethod = this.decoratorParser.parseMethodDecorator(method);
+        if (!httpMethod) {
+          return null;
+        }
 
-      // 仮実装: メソッドをスキップ
-      continue;
-    }
-
-    return results;
+        return {
+          name: method.getName(),
+          httpMethod,
+          params: this.decoratorParser.parseParamDecorators(method),
+          guards: this.decoratorParser.parseGuardDecorators(method, 'method'),
+          metadata: this.decoratorParser.parseMetadataDecorators(method, this.publicDecorators),
+          lineNumber: method.getStartLineNumber(),
+        };
+      })
+      .filter((method): method is ControllerMethodInfo => method !== null);
   }
 
   /**
    * EndpointInfo形式に変換
-   *
-   * @param controller コントローラー情報
-   * @param globalGuards グローバルガード一覧
-   * @param authDetector 認証検出器（後続タスクで実装）
    */
   extractEndpoints(
     controller: ControllerInfo,
     globalGuards: readonly string[],
-    authDetector?: unknown // AuthDetectorは後続タスクで実装
+    authDetector: AuthDetector
   ): readonly EndpointInfo[] {
     return controller.methods.map(method => {
       const fullPath = this.joinPaths(controller.basePath, method.httpMethod.path);
       const httpMethod = this.convertHttpMethod(method.httpMethod.type);
+      const endpointAuth = authDetector.detectAuth(controller, method, globalGuards);
 
       return {
         path: fullPath,
@@ -138,14 +134,21 @@ export class ControllerParser {
         pathParams: this.extractPathParams(method.params),
         queryParams: this.extractQueryParams(method.params),
         bodyParams: this.extractBodyParams(method.params),
-        auth: {
-          required: false,
-          middlewares: [],
-        }, // AuthDetector実装後に対応
+        auth: this.convertToAuthInfo(endpointAuth),
         sourceFile: controller.sourceFile,
         lineNumber: method.lineNumber,
       };
     });
+  }
+
+  /**
+   * EndpointAuthをAuthInfoに変換
+   */
+  private convertToAuthInfo(endpointAuth: EndpointAuth): AuthInfo {
+    return {
+      required: endpointAuth.required === true,
+      middlewares: endpointAuth.guards.map(g => g.name),
+    };
   }
 
   /**
