@@ -3,6 +3,7 @@
 import type { HttpMethod } from './http';
 import type { ParamInfo } from './param';
 import type { AuthInfo } from './auth';
+import type { EndpointResponses } from './response';
 
 /**
  * エンドポイント情報
@@ -24,4 +25,6 @@ export type EndpointInfo = {
   readonly sourceFile: string;
   /** 行番号 */
   readonly lineNumber: number;
+  /** レスポンス情報（extractResponses有効時のみ） */
+  readonly responses?: EndpointResponses;
 };

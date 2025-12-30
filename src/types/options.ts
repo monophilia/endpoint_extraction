@@ -17,6 +17,14 @@ export type ExtractorOptions = {
   readonly authConfig?: AuthConfig;
   /** 詳細ログ出力 */
   readonly verbose?: boolean;
+  /** レスポンス型を抽出するか（デフォルト: false） */
+  readonly extractResponses?: boolean;
+  /** レスポンス抽出の深さ制限（デフォルト: 3） */
+  readonly responseDepthLimit?: number;
+  /** 高度な解析を有効にするか（デフォルト: false） */
+  readonly deepAnalysis?: boolean;
+  /** 高度な解析の再帰深度制限（デフォルト: 3） */
+  readonly deepAnalysisDepth?: number;
 };
 
 /**
@@ -33,4 +41,12 @@ export type CLIOptions = {
   readonly verbose?: boolean;
   /** 認証解析設定 */
   readonly authConfig?: AuthConfig;
+  /** レスポンス型を抽出するか */
+  readonly extractResponses?: boolean;
+  /** レスポンス抽出の深さ制限 */
+  readonly responseDepthLimit?: number;
+  /** 高度な解析を有効にするか */
+  readonly deepAnalysis?: boolean;
+  /** 高度な解析の再帰深度制限 */
+  readonly deepAnalysisDepth?: number;
 };
