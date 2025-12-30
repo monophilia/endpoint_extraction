@@ -49,7 +49,11 @@ describe('ModuleParser', () => {
 
       const result = parser.parseModule(sourceFile);
 
-      expect(result.controllers[0].importPath).toBe('./users.controller');
+      const firstController = result.controllers[0];
+      if (!firstController) {
+        throw new Error('Expected at least one controller');
+      }
+      expect(firstController.importPath).toBe('./users.controller');
     });
   });
 });
