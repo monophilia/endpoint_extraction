@@ -1,8 +1,10 @@
 // index.ts
 
 import { FastifyExtractor } from './src/extractors/fastify';
+import { NestJSExtractor } from './src/extractors/nestjs';
 import { YamlGenerator } from './src/generators/yamlGenerator';
 import type { CLIOptions, AuthConfig, FrameworkType } from './src/types';
+import type { EndpointExtractor } from './src/extractors/types';
 import { DEFAULT_AUTH_CONFIG, FRAMEWORKS } from './src/types';
 
 async function main() {
@@ -14,11 +16,12 @@ async function main() {
   }
 
   const options = parseArgs(args);
-  const { projectRoot, verbose, outputPath, authConfig, extractResponses, responseDepthLimit, deepAnalysis, deepAnalysisDepth } = options;
+  const { projectRoot, verbose, outputPath, authConfig, extractResponses, responseDepthLimit, deepAnalysis, deepAnalysisDepth, framework, configPath } = options;
 
   try {
-    // 現時点ではFastifyExtractorのみ
-    const extractor = new FastifyExtractor();
+    // フレームワーク検出またはExtractor選択
+    const detectedFramework = framework ?? await detectFramework(projectRoot);
+    const extractor = createExtractor(detectedFramework);
 
     if (verbose) {
       console.log(`Using ${extractor.framework} extractor`);
@@ -33,6 +36,7 @@ async function main() {
       responseDepthLimit,
       deepAnalysis,
       deepAnalysisDepth,
+      configPath,
     });
 
     // YAML出力
@@ -66,6 +70,37 @@ function isFrameworkType(value: string): value is FrameworkType {
   return frameworkStrings.includes(value);
 }
 
+/**
+ * フレームワークを自動検出
+ */
+async function detectFramework(projectRoot: string): Promise<FrameworkType> {
+  const nestExtractor = new NestJSExtractor();
+  if (await nestExtractor.canHandle(projectRoot)) {
+    return 'nestjs';
+  }
+
+  const fastifyExtractor = new FastifyExtractor();
+  if (await fastifyExtractor.canHandle(projectRoot)) {
+    return 'fastify';
+  }
+
+  throw new Error('No supported framework detected. Use --framework to specify.');
+}
+
+/**
+ * Extractor選択
+ */
+function createExtractor(framework: FrameworkType): EndpointExtractor {
+  switch (framework) {
+    case 'nestjs':
+      return new NestJSExtractor();
+    case 'fastify':
+      return new FastifyExtractor();
+    default:
+      throw new Error(`Unsupported framework: ${framework}`);
+  }
+}
+
 function parseArgs(args: string[]): CLIOptions {
   const projectRoot = args[0];
   if (!projectRoot) {
@@ -84,6 +119,7 @@ function parseArgs(args: string[]): CLIOptions {
       responseDepthLimit?: number;
       deepAnalysis?: boolean;
       deepAnalysisDepth?: number;
+      configPath?: string;
     }
   ): typeof acc => {
     if (index >= args.length) {
@@ -172,6 +208,17 @@ function parseArgs(args: string[]): CLIOptions {
           deepAnalysisDepth: depth,
         });
       }
+      case '--config':
+      case '-c': {
+        const configValue = args[index + 1];
+        if (!configValue) {
+          throw new Error('--config requires a value');
+        }
+        return parseArgsRecursive(index + 2, {
+          ...acc,
+          configPath: configValue,
+        });
+      }
       default:
         return parseArgsRecursive(index + 1, acc);
     }
@@ -186,6 +233,7 @@ Usage: bun run index.ts <project-path> [options]
 
 Options:
   --framework <name>           Specify framework (fastify, nestjs, express)
+  --config, -c <file>          Config file path (extractor.config.yaml)
   --output <file>              Output file path
   --verbose                    Enable verbose logging
   --auth-middlewares <list>    Comma-separated auth middleware names
@@ -197,6 +245,8 @@ Options:
 Examples:
   bun run index.ts /path/to/project
   bun run index.ts /path/to/project --framework fastify
+  bun run index.ts /path/to/project --framework nestjs
+  bun run index.ts /path/to/project --config ./extractor.config.yaml
   bun run index.ts /path/to/project --auth-middlewares tokenVerification,authGuard
   bun run index.ts /path/to/project --extract-responses
   bun run index.ts /path/to/project --extract-responses --response-depth 2
