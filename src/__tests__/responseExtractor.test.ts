@@ -10,6 +10,9 @@ import {
   ERROR_RESPONSE_FIXTURE,
   MULTIPLE_ERRORS_FIXTURE,
   NO_RESPONSE_FIXTURE,
+  VARIABLE_STATUS_CODE_FIXTURE,
+  VARIABLE_RESPONSE_FIXTURE,
+  VARIABLE_ERROR_RESPONSE_FIXTURE,
 } from './fixtures/response.fixture';
 
 /**
@@ -187,6 +190,59 @@ describe('ResponseExtractor', () => {
 
       const errorResponse = responses.errors[0];
       expect(errorResponse).toBeDefined();
+      expect(errorResponse?.message).toBe('User not found');
+    });
+  });
+
+  // Phase 2: 変数追跡
+  describe('変数追跡（Phase 2）', () => {
+    test('変数経由のステータスコードを解決する', () => {
+      const { extractor, sourceFile } = createExtractorAndHandler(VARIABLE_STATUS_CODE_FIXTURE);
+      const handler = getHandlerFunction(sourceFile);
+      expect(handler).not.toBeNull();
+
+      const responses = extractor.extractFromHandler(handler!);
+
+      // status = 404 を変数から解決
+      expect(responses.errors).toHaveLength(1);
+      const errorResponse = responses.errors[0];
+      expect(errorResponse).toBeDefined();
+      expect(errorResponse?.code).toBe(404);
+      expect(errorResponse?.message).toBe('User not found');
+    });
+
+    test('変数経由のレスポンスオブジェクトを解決する', () => {
+      const { extractor, sourceFile } = createExtractorAndHandler(VARIABLE_RESPONSE_FIXTURE);
+      const handler = getHandlerFunction(sourceFile);
+      expect(handler).not.toBeNull();
+
+      const responses = extractor.extractFromHandler(handler!);
+
+      // response変数から型を解決
+      expect(responses.success).toHaveLength(1);
+      const successResponse = responses.success[0];
+      expect(successResponse).toBeDefined();
+      expect(successResponse?.code).toBe(200);
+      expect(successResponse?.dataType).toContainEqual(
+        expect.objectContaining({ name: 'id' })
+      );
+      expect(successResponse?.dataType).toContainEqual(
+        expect.objectContaining({ name: 'name' })
+      );
+    });
+
+    test('変数経由のステータスコードとレスポンスを両方解決する', () => {
+      const { extractor, sourceFile } = createExtractorAndHandler(VARIABLE_ERROR_RESPONSE_FIXTURE);
+      const handler = getHandlerFunction(sourceFile);
+      expect(handler).not.toBeNull();
+
+      const responses = extractor.extractFromHandler(handler!);
+
+      // statusCode = 404, errorResponse = {...} を変数から解決
+      expect(responses.errors).toHaveLength(1);
+      const errorResponse = responses.errors[0];
+      expect(errorResponse).toBeDefined();
+      expect(errorResponse?.code).toBe(404);
       expect(errorResponse?.message).toBe('User not found');
     });
   });

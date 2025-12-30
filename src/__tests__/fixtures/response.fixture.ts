@@ -96,3 +96,39 @@ export default async function(server: FastifyInstance) {
   });
 }
 `;
+
+// Phase 2: 変数追跡用フィクスチャ
+
+export const VARIABLE_STATUS_CODE_FIXTURE = `
+import { FastifyInstance } from 'fastify';
+
+export default async function(server: FastifyInstance) {
+  server.get('/user/:id', async (req, reply) => {
+    const status = 404;
+    reply.code(status).send({ error: 'NOT_FOUND', message: 'User not found' });
+  });
+}
+`;
+
+export const VARIABLE_RESPONSE_FIXTURE = `
+import { FastifyInstance } from 'fastify';
+
+export default async function(server: FastifyInstance) {
+  server.get('/user/:id', async (req, reply) => {
+    const response = { id: '1', name: 'Test User' };
+    reply.send(response);
+  });
+}
+`;
+
+export const VARIABLE_ERROR_RESPONSE_FIXTURE = `
+import { FastifyInstance } from 'fastify';
+
+export default async function(server: FastifyInstance) {
+  server.get('/user/:id', async (req, reply) => {
+    const errorResponse = { error: 'NOT_FOUND', message: 'User not found' };
+    const statusCode = 404;
+    reply.code(statusCode).send(errorResponse);
+  });
+}
+`;
