@@ -6,6 +6,7 @@ import {
   SyntaxKind,
   ArrowFunction,
   FunctionExpression,
+  FunctionDeclaration,
   CallExpression,
 } from 'ts-morph';
 import type {
@@ -16,6 +17,16 @@ import type {
   ResponseSource,
 } from '../../types';
 import { TypeExtractor } from '../../core/typeExtractor';
+
+/**
+ * ResponseExtractor のオプション
+ */
+export type ResponseExtractorOptions = {
+  readonly enableDeepAnalysis?: boolean;
+  readonly deepAnalysisDepth?: number;
+};
+
+const DEFAULT_DEEP_ANALYSIS_DEPTH = 3;
 
 export class ResponseExtractor {
   private readonly typeExtractor: TypeExtractor;
@@ -28,28 +39,143 @@ export class ResponseExtractor {
   /**
    * ハンドラー関数からレスポンス情報を抽出
    */
-  extractFromHandler(handlerNode: ArrowFunction | FunctionExpression): EndpointResponses {
+  extractFromHandler(
+    handlerNode: ArrowFunction | FunctionExpression | FunctionDeclaration,
+    options: ResponseExtractorOptions = {}
+  ): EndpointResponses {
     const successResponses: ResponseInfo[] = [];
     const errorResponses: ErrorResponseInfo[] = [];
 
-    handlerNode.forEachDescendant(node => {
-      const kind = node.getKind();
+    const enableDeepAnalysis = options.enableDeepAnalysis ?? false;
+    const maxDepth = options.deepAnalysisDepth ?? DEFAULT_DEEP_ANALYSIS_DEPTH;
 
-      if (kind === SyntaxKind.ReturnStatement) {
-        this.processReturnStatement(node, successResponses);
-        return;
-      }
-
-      if (kind === SyntaxKind.CallExpression) {
-        this.processCallExpression(node, successResponses, errorResponses);
-        return;
-      }
-    });
+    this.extractFromNode(
+      handlerNode,
+      successResponses,
+      errorResponses,
+      enableDeepAnalysis,
+      maxDepth,
+      0
+    );
 
     return {
       success: this.deduplicateResponses(successResponses),
       errors: this.deduplicateErrors(errorResponses),
     };
+  }
+
+  /**
+   * ノードからレスポンスを抽出（再帰対応）
+   */
+  private extractFromNode(
+    node: Node,
+    successResponses: ResponseInfo[],
+    errorResponses: ErrorResponseInfo[],
+    enableDeepAnalysis: boolean,
+    maxDepth: number,
+    currentDepth: number
+  ): void {
+    node.forEachDescendant(child => {
+      const kind = child.getKind();
+
+      switch (kind) {
+        case SyntaxKind.ReturnStatement:
+          this.processReturnStatement(child, successResponses);
+          break;
+        case SyntaxKind.CallExpression:
+          this.processCallExpression(child, successResponses, errorResponses);
+          // Phase 3: 深度解析が有効なら外部関数を追跡
+          if (enableDeepAnalysis && currentDepth < maxDepth) {
+            this.analyzeExternalFunction(
+              child,
+              successResponses,
+              errorResponses,
+              enableDeepAnalysis,
+              maxDepth,
+              currentDepth + 1
+            );
+          }
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  /**
+   * 外部関数を解析（Phase 3: 高度な解析）
+   */
+  private analyzeExternalFunction(
+    call: Node,
+    successResponses: ResponseInfo[],
+    errorResponses: ErrorResponseInfo[],
+    enableDeepAnalysis: boolean,
+    maxDepth: number,
+    currentDepth: number
+  ): void {
+    if (!Node.isCallExpression(call)) {
+      return;
+    }
+
+    const funcDef = this.resolveFunctionDefinition(call);
+    if (!funcDef) {
+      return;
+    }
+
+    // 関数内部を再帰的に解析
+    this.extractFromNode(
+      funcDef,
+      successResponses,
+      errorResponses,
+      enableDeepAnalysis,
+      maxDepth,
+      currentDepth
+    );
+  }
+
+  /**
+   * 関数呼び出しから関数定義を取得
+   */
+  private resolveFunctionDefinition(
+    call: CallExpression
+  ): FunctionDeclaration | ArrowFunction | FunctionExpression | null {
+    const expr = call.getExpression();
+
+    if (!Node.isIdentifier(expr)) {
+      return null;
+    }
+
+    const definitions = expr.getDefinitionNodes();
+    for (const def of definitions) {
+      // 同一ファイル内の関数のみ追跡
+      if (def.getSourceFile() !== this.sourceFile) {
+        continue;
+      }
+
+      if (Node.isFunctionDeclaration(def)) {
+        return def;
+      }
+
+      // 変数宣言の場合、initializerからArrowFunction/FunctionExpressionを取得
+      if (!Node.isVariableDeclaration(def)) {
+        continue;
+      }
+
+      const initializer = def.getInitializer();
+      if (!initializer) {
+        continue;
+      }
+
+      if (Node.isArrowFunction(initializer)) {
+        return initializer;
+      }
+
+      if (Node.isFunctionExpression(initializer)) {
+        return initializer;
+      }
+    }
+
+    return null;
   }
 
   /**

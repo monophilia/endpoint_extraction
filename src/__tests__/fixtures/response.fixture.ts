@@ -165,13 +165,13 @@ function handleSuccess(reply: FastifyReply, data: { id: string }) {
   reply.code(200).send(data);
 }
 
-function handleError(reply: FastifyReply, code: number, message: string) {
-  reply.code(code).send({ error: 'ERROR', message });
+function handleError(reply: FastifyReply, message: string) {
+  reply.code(400).send({ error: 'ERROR', message });
 }
 
 function processUser(reply: FastifyReply, userId: string) {
   if (userId === 'invalid') {
-    handleError(reply, 400, 'Invalid user ID');
+    handleError(reply, 'Invalid user ID');
     return;
   }
   handleSuccess(reply, { id: userId });
