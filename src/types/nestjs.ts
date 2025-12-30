@@ -110,6 +110,7 @@ export type ControllerMethodInfo = {
 export type ModuleInfo = {
   readonly name: string;
   readonly controllers: readonly ControllerRegistration[];
+  readonly importedModules: readonly ModuleRegistration[];
   readonly globalGuards: readonly string[];
   readonly sourceFile: string;
 };
@@ -118,6 +119,15 @@ export type ModuleInfo = {
  * コントローラー登録情報
  */
 export type ControllerRegistration = {
+  readonly name: string;
+  readonly importPath: string;
+  readonly resolvedPath: string;
+};
+
+/**
+ * モジュール登録情報
+ */
+export type ModuleRegistration = {
   readonly name: string;
   readonly importPath: string;
   readonly resolvedPath: string;

@@ -1,8 +1,14 @@
 import { SourceFile, Node, ObjectLiteralExpression } from 'ts-morph';
-import type { ModuleInfo, ControllerRegistration } from '../../types/nestjs';
+import type { ModuleInfo, ControllerRegistration, ModuleRegistration } from '../../types/nestjs';
 import * as path from 'path';
 
 export class ModuleParser {
+  private readonly projectRoot: string;
+
+  constructor(projectRoot: string) {
+    this.projectRoot = projectRoot;
+  }
+
   /**
    * モジュールファイルを解析
    */
@@ -28,6 +34,7 @@ export class ModuleParser {
       return {
         name: classDecl.getName() ?? 'AppModule',
         controllers: this.extractControllers(configArg, sourceFile),
+        importedModules: this.extractImportedModules(configArg, sourceFile),
         globalGuards: this.extractGlobalGuards(configArg),
         sourceFile: sourceFile.getFilePath(),
       };
@@ -36,6 +43,7 @@ export class ModuleParser {
     return {
       name: 'Unknown',
       controllers: [],
+      importedModules: [],
       globalGuards: [],
       sourceFile: sourceFile.getFilePath(),
     };
@@ -85,6 +93,104 @@ export class ModuleParser {
     }
 
     return results;
+  }
+
+  /**
+   * importsプロパティからモジュール一覧を抽出
+   */
+  private extractImportedModules(
+    config: ObjectLiteralExpression,
+    sourceFile: SourceFile
+  ): readonly ModuleRegistration[] {
+    const importsProp = config.getProperty('imports');
+    if (!importsProp) {
+      return [];
+    }
+
+    if (!Node.isPropertyAssignment(importsProp)) {
+      return [];
+    }
+
+    const initializer = importsProp.getInitializer();
+    if (!initializer) {
+      return [];
+    }
+
+    if (!Node.isArrayLiteralExpression(initializer)) {
+      return [];
+    }
+
+    const results: ModuleRegistration[] = [];
+    const elements = initializer.getElements();
+
+    for (const element of elements) {
+      const moduleName = this.extractModuleName(element);
+      if (!moduleName) {
+        continue;
+      }
+
+      // Module名がModuleで終わるもののみを対象（TypeOrmModule.forRoot等は除外）
+      if (!moduleName.endsWith('Module')) {
+        continue;
+      }
+
+      const importPath = this.resolveImportPath(sourceFile, moduleName);
+      // node_modulesからのインポートは除外
+      if (!importPath.startsWith('.') && !importPath.startsWith('src/')) {
+        continue;
+      }
+
+      results.push({
+        name: moduleName,
+        importPath,
+        resolvedPath: this.resolveFilePath(sourceFile.getFilePath(), importPath),
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * 要素からモジュール名を抽出
+   * - 直接参照: UserModule
+   * - forwardRef: forwardRef(() => UserModule)
+   */
+  private extractModuleName(element: Node): string | null {
+    // 直接識別子の場合
+    if (Node.isIdentifier(element)) {
+      return element.getText();
+    }
+
+    // forwardRef(() => ModuleName) の場合
+    if (!Node.isCallExpression(element)) {
+      return null;
+    }
+
+    const expression = element.getExpression();
+    if (!Node.isIdentifier(expression)) {
+      return null;
+    }
+
+    if (expression.getText() !== 'forwardRef') {
+      return null;
+    }
+
+    const args = element.getArguments();
+    if (args.length === 0) {
+      return null;
+    }
+
+    const arg = args[0];
+    if (!Node.isArrowFunction(arg)) {
+      return null;
+    }
+
+    const body = arg.getBody();
+    if (!Node.isIdentifier(body)) {
+      return null;
+    }
+
+    return body.getText();
   }
 
   /**
@@ -166,18 +272,20 @@ export class ModuleParser {
   }
 
   private resolveFilePath(moduleFilePath: string, importPath: string): string {
-    if (!importPath.startsWith('.')) {
-      return importPath; // node_modulesからのインポート
+    // src/ から始まるパスはプロジェクトルートからの相対パス
+    if (importPath.startsWith('src/')) {
+      const resolved = path.resolve(this.projectRoot, importPath);
+      return resolved.endsWith('.ts') ? resolved : `${resolved}.ts`;
     }
 
-    const dir = path.dirname(moduleFilePath);
-    const resolved = path.resolve(dir, importPath);
-
-    // .ts拡張子を追加
-    if (!resolved.endsWith('.ts')) {
-      return `${resolved}.ts`;
+    // 相対パス
+    if (importPath.startsWith('.')) {
+      const dir = path.dirname(moduleFilePath);
+      const resolved = path.resolve(dir, importPath);
+      return resolved.endsWith('.ts') ? resolved : `${resolved}.ts`;
     }
 
-    return resolved;
+    // node_modulesからのインポート
+    return importPath;
   }
 }

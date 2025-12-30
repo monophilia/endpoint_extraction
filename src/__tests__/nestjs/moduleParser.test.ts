@@ -12,7 +12,7 @@ describe('ModuleParser', () => {
 
   beforeEach(() => {
     project = new Project({ useInMemoryFileSystem: true });
-    parser = new ModuleParser();
+    parser = new ModuleParser('/test/project');
   });
 
   describe('parseModule', () => {

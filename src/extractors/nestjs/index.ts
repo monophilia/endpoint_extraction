@@ -7,6 +7,7 @@ import type {
   FrameworkType,
   PrefixedEndpoints,
   ControllerRegistration,
+  ModuleRegistration,
 } from '../../types';
 import { Project, SourceFile } from 'ts-morph';
 import { ConfigLoader } from '../../config/loader';
@@ -49,7 +50,7 @@ export class NestJSExtractor implements EndpointExtractor {
     const project = new Project({ tsConfigFilePath: fullTsconfigPath });
 
     // 2. app.module.tsを解析
-    const moduleParser = new ModuleParser();
+    const moduleParser = new ModuleParser(projectRoot);
     const moduleFile = project.getSourceFile(fullEntryPath);
     if (!moduleFile) {
       throw new Error(`Module file not found: ${fullEntryPath}`);
@@ -57,22 +58,31 @@ export class NestJSExtractor implements EndpointExtractor {
 
     const moduleInfo = moduleParser.parseModule(moduleFile);
 
+    // 3. 再帰的にモジュールを解析して全コントローラーを収集
+    const allControllers = this.collectAllControllers(
+      moduleInfo,
+      project,
+      moduleParser,
+      new Set<string>(),
+      verbose
+    );
+
     if (verbose) {
-      console.log(`[NestJSExtractor] Found ${moduleInfo.controllers.length} controllers`);
+      console.log(`[NestJSExtractor] Found ${allControllers.length} controllers (recursive)`);
       console.log(`[NestJSExtractor] Global guards: ${moduleInfo.globalGuards.join(', ')}`);
     }
 
-    // 3. GuardAnalyzerとAuthDetectorを初期化
+    // 4. GuardAnalyzerとAuthDetectorを初期化
     const guardAnalyzer = new GuardAnalyzer(project);
     const authDetector = new NestJSAuthDetector(nestjsConfig, guardAnalyzer);
 
-    // 4. 各コントローラーを解析
+    // 5. 各コントローラーを解析
     const controllerParser = new ControllerParser(
       nestjsConfig.publicDecorators ?? ['Public', 'SkipAuth']
     );
 
     const routes = this.parseControllers(
-      moduleInfo.controllers,
+      allControllers,
       project,
       controllerParser,
       moduleInfo.globalGuards,
@@ -93,6 +103,47 @@ export class NestJSExtractor implements EndpointExtractor {
       authRequiredCount,
       publicCount,
     };
+  }
+
+  /**
+   * 再帰的にモジュールを解析して全コントローラーを収集
+   */
+  private collectAllControllers(
+    moduleInfo: { controllers: readonly ControllerRegistration[]; importedModules: readonly ModuleRegistration[] },
+    project: Project,
+    moduleParser: ModuleParser,
+    visited: Set<string>,
+    verbose: boolean
+  ): ControllerRegistration[] {
+    const controllers: ControllerRegistration[] = [...moduleInfo.controllers];
+
+    const childControllers = moduleInfo.importedModules
+      .filter(m => !visited.has(m.resolvedPath))
+      .flatMap(m => this.processImportedModule(m, project, moduleParser, visited, verbose));
+
+    return [...controllers, ...childControllers];
+  }
+
+  /**
+   * インポートされたモジュールを処理
+   */
+  private processImportedModule(
+    importedModule: ModuleRegistration,
+    project: Project,
+    moduleParser: ModuleParser,
+    visited: Set<string>,
+    verbose: boolean
+  ): ControllerRegistration[] {
+    visited.add(importedModule.resolvedPath);
+
+    const moduleFile = project.getSourceFile(importedModule.resolvedPath);
+    if (!moduleFile) {
+      verbose && console.log(`[NestJSExtractor] Module file not found: ${importedModule.resolvedPath}`);
+      return [];
+    }
+
+    const childModuleInfo = moduleParser.parseModule(moduleFile);
+    return this.collectAllControllers(childModuleInfo, project, moduleParser, visited, verbose);
   }
 
   /**

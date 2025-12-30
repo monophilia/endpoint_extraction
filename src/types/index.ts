@@ -31,6 +31,7 @@ export type {
   ControllerMethodInfo,
   ModuleInfo,
   ControllerRegistration,
+  ModuleRegistration,
   AuthGuardResult,
   DetectedGuard,
   EndpointAuth,
