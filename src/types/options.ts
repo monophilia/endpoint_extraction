@@ -13,6 +13,8 @@ export type ExtractorOptions = {
   readonly entryFilePath?: string;
   /** tsconfigのパス（プロジェクトルートからの相対パス） */
   readonly tsconfigPath?: string;
+  /** 設定ファイルのパス */
+  readonly configPath?: string;
   /** 認証解析設定 */
   readonly authConfig?: AuthConfig;
   /** 詳細ログ出力 */
@@ -35,6 +37,8 @@ export type CLIOptions = {
   readonly projectRoot: string;
   /** フレームワーク指定（未指定時は自動検出） */
   readonly framework?: FrameworkType;
+  /** 設定ファイルパス */
+  readonly configPath?: string;
   /** 出力ファイルパス */
   readonly outputPath?: string;
   /** 詳細ログ出力 */
