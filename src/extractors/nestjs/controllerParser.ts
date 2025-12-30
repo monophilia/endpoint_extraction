@@ -6,6 +6,8 @@ import type {
   ControllerMethodInfo,
   ParamDecoratorInfo,
   MethodDecoratorType,
+  GuardDecoratorInfo,
+  MetadataDecoratorInfo,
 } from '../../types/nestjs';
 import type { EndpointInfo } from '../../types/endpoint';
 import type { ParamInfo } from '../../types/param';
@@ -61,8 +63,8 @@ export class ControllerParser {
   ): ControllerInfo {
     // DecoratorParserは後続タスクで実装されるため、一旦仮実装
     const basePath = this.extractControllerPath(classDecl);
-    const classGuards = []; // DecoratorParser実装後に対応
-    const classMetadata = []; // DecoratorParser実装後に対応
+    const classGuards: GuardDecoratorInfo[] = []; // DecoratorParser実装後に対応
+    const classMetadata: MetadataDecoratorInfo[] = []; // DecoratorParser実装後に対応
 
     const methods = this.parseMethods(classDecl);
 
@@ -91,7 +93,7 @@ export class ControllerParser {
       return '';
     }
 
-    const arg = args[0];
+    const arg = args[0]!;
     return arg.getText().replace(/['"]/g, '');
   }
 

@@ -60,18 +60,19 @@ export class ConfigLoader {
   }
 
   private mergeConfigs(configs: ExtractorConfig[]): ExtractorConfig {
-    return configs.reduceRight((acc, config) =>
+    const merged = configs.reduceRight((acc, config) =>
       this.deepMerge(acc, config)
     );
+    return merged;
   }
 
-  private deepMerge<T extends ObjectRecord>(base: T, override: T): T {
+  private deepMerge<T extends ObjectRecord>(base: T, override: T): ObjectRecord {
+    const isObject = (value: unknown): value is ObjectRecord =>
+      typeof value === 'object' && value !== null && !Array.isArray(value);
+
     const mergedEntries = Object.keys(override).map((key): [string, unknown] => {
       const baseValue = base[key];
       const overrideValue = override[key];
-
-      const isObject = (value: unknown): value is ObjectRecord =>
-        typeof value === 'object' && value !== null && !Array.isArray(value);
 
       const shouldDeepMerge = isObject(baseValue) && isObject(overrideValue);
 

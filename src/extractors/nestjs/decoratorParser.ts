@@ -31,7 +31,7 @@ export class DecoratorParser {
       }
 
       const args = decorator.getArguments();
-      const path = args.length > 0 ? this.extractStringValue(args[0]) : '';
+      const path = args.length > 0 ? this.extractStringValue(args[0]!) : '';
 
       return {
         type: name,
@@ -61,7 +61,7 @@ export class DecoratorParser {
         }
 
         const args = decorator.getArguments();
-        const argName = args.length > 0 ? this.extractStringValue(args[0]) : undefined;
+        const argName = args.length > 0 ? this.extractStringValue(args[0]!) : undefined;
 
         results.push({
           type: name,
@@ -149,7 +149,7 @@ export class DecoratorParser {
       return '';
     }
 
-    return this.extractStringValue(args[0]);
+    return this.extractStringValue(args[0]!);
   }
 
   // --- Private Methods ---
@@ -194,7 +194,7 @@ export class DecoratorParser {
     }
 
     if (args.length === 1) {
-      return this.nodeToValue(args[0]);
+      return this.nodeToValue(args[0]!);
     }
 
     return args.map(arg => this.nodeToValue(arg));

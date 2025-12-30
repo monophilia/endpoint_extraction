@@ -31,7 +31,7 @@ describe('GuardAnalyzer', () => {
       const sourceFile = project.createSourceFile('jwt-auth.guard.ts', JWT_AUTH_GUARD_FIXTURE);
       const guardClass = sourceFile.getClasses()[0];
 
-      const result = analyzer.isAuthGuard('JwtAuthGuard', guardClass, defaultConfig);
+      const result = analyzer.isAuthGuard('JwtAuthGuard', guardClass ?? null, defaultConfig);
 
       expect(result.isAuth).toBe(true);
       expect(result.confidence).toBe('high');
@@ -42,7 +42,7 @@ describe('GuardAnalyzer', () => {
       const sourceFile = project.createSourceFile('throttle.guard.ts', THROTTLE_GUARD_FIXTURE);
       const guardClass = sourceFile.getClasses()[0];
 
-      const result = analyzer.isAuthGuard('ThrottlerGuard', guardClass, defaultConfig);
+      const result = analyzer.isAuthGuard('ThrottlerGuard', guardClass ?? null, defaultConfig);
 
       expect(result.isAuth).toBe(false);
       expect(result.confidence).toBe('high');
@@ -82,7 +82,7 @@ describe('GuardAnalyzer', () => {
   describe('checkAuthGuardInheritance', () => {
     it('直接AuthGuard継承を検出する', () => {
       const sourceFile = project.createSourceFile('jwt-auth.guard.ts', JWT_AUTH_GUARD_FIXTURE);
-      const guardClass = sourceFile.getClasses()[0];
+      const guardClass = sourceFile.getClasses()[0]!;
 
       const result = analyzer.checkAuthGuardInheritance(guardClass);
 
@@ -91,7 +91,7 @@ describe('GuardAnalyzer', () => {
 
     it('CanActivate実装のみのガードは継承なし', () => {
       const sourceFile = project.createSourceFile('throttle.guard.ts', THROTTLE_GUARD_FIXTURE);
-      const guardClass = sourceFile.getClasses()[0];
+      const guardClass = sourceFile.getClasses()[0]!;
 
       const result = analyzer.checkAuthGuardInheritance(guardClass);
 

@@ -15,7 +15,7 @@ describe('DecoratorParser', () => {
   describe('parseMethodDecorators', () => {
     it('@Get()デコレーターを検出する', () => {
       const sourceFile = project.createSourceFile('test.ts', BASIC_CONTROLLER_FIXTURE);
-      const classDecl = sourceFile.getClasses()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
       const method = classDecl.getMethod('findAll')!;
 
       const result = parser.parseMethodDecorator(method);
@@ -27,7 +27,7 @@ describe('DecoratorParser', () => {
 
     it('@Get(\':id\')のパスを抽出する', () => {
       const sourceFile = project.createSourceFile('test.ts', BASIC_CONTROLLER_FIXTURE);
-      const classDecl = sourceFile.getClasses()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
       const method = classDecl.getMethod('findOne')!;
 
       const result = parser.parseMethodDecorator(method);
@@ -39,7 +39,7 @@ describe('DecoratorParser', () => {
 
     it('@Post()デコレーターを検出する', () => {
       const sourceFile = project.createSourceFile('test.ts', BASIC_CONTROLLER_FIXTURE);
-      const classDecl = sourceFile.getClasses()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
       const method = classDecl.getMethod('create')!;
 
       const result = parser.parseMethodDecorator(method);
@@ -54,7 +54,7 @@ describe('DecoratorParser', () => {
           normalMethod() {}
         }
       `);
-      const classDecl = sourceFile.getClasses()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
       const method = classDecl.getMethod('normalMethod')!;
 
       const result = parser.parseMethodDecorator(method);
@@ -66,43 +66,43 @@ describe('DecoratorParser', () => {
   describe('parseParamDecorators', () => {
     it('@Param()デコレーターを検出する', () => {
       const sourceFile = project.createSourceFile('test.ts', BASIC_CONTROLLER_FIXTURE);
-      const classDecl = sourceFile.getClasses()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
       const method = classDecl.getMethod('findOne')!;
 
       const result = parser.parseParamDecorators(method);
 
       expect(result).toHaveLength(1);
-      expect(result[0].type).toBe('Param');
-      expect(result[0].argName).toBe('id');
-      expect(result[0].paramName).toBe('id');
-      expect(result[0].paramType).toBe('string');
+      expect(result[0]!.type).toBe('Param');
+      expect(result[0]!.argName).toBe('id');
+      expect(result[0]!.paramName).toBe('id');
+      expect(result[0]!.paramType).toBe('string');
     });
 
     it('@Body()デコレーターを検出する', () => {
       const sourceFile = project.createSourceFile('test.ts', BASIC_CONTROLLER_FIXTURE);
-      const classDecl = sourceFile.getClasses()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
       const method = classDecl.getMethod('create')!;
 
       const result = parser.parseParamDecorators(method);
 
       expect(result).toHaveLength(1);
-      expect(result[0].type).toBe('Body');
-      expect(result[0].paramName).toBe('createUserDto');
+      expect(result[0]!.type).toBe('Body');
+      expect(result[0]!.paramName).toBe('createUserDto');
     });
 
     it('@Query()デコレーターを検出する', () => {
       const sourceFile = project.createSourceFile('test.ts', BASIC_CONTROLLER_FIXTURE);
-      const classDecl = sourceFile.getClasses()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
       const method = classDecl.getMethod('search')!;
 
       const result = parser.parseParamDecorators(method);
 
       expect(result).toHaveLength(2);
-      expect(result[0].type).toBe('Query');
-      expect(result[0].argName).toBe('name');
-      expect(result[0].required).toBe(true);
-      expect(result[1].argName).toBe('age');
-      expect(result[1].required).toBe(false);
+      expect(result[0]!.type).toBe('Query');
+      expect(result[0]!.argName).toBe('name');
+      expect(result[0]!.required).toBe(true);
+      expect(result[1]!.argName).toBe('age');
+      expect(result[1]!.required).toBe(false);
     });
 
     it('複数の@Param()を検出する', () => {
@@ -118,14 +118,14 @@ describe('DecoratorParser', () => {
           ) {}
         }
       `);
-      const classDecl = sourceFile.getClasses()[0];
-      const method = classDecl.getMethods()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
+      const method = classDecl.getMethods()[0]!;
 
       const result = parser.parseParamDecorators(method);
 
       expect(result).toHaveLength(2);
-      expect(result[0].argName).toBe('groupId');
-      expect(result[1].argName).toBe('userId');
+      expect(result[0]!.argName).toBe('groupId');
+      expect(result[1]!.argName).toBe('userId');
     });
   });
 
@@ -142,14 +142,14 @@ describe('DecoratorParser', () => {
           protected() {}
         }
       `);
-      const classDecl = sourceFile.getClasses()[0];
-      const method = classDecl.getMethods()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
+      const method = classDecl.getMethods()[0]!;
 
       const result = parser.parseGuardDecorators(method);
 
       expect(result).toHaveLength(1);
-      expect(result[0].guards).toContain('AuthGuard');
-      expect(result[0].level).toBe('method');
+      expect(result[0]!.guards).toContain('AuthGuard');
+      expect(result[0]!.level).toBe('method');
     });
 
     it('複数ガードを検出する', () => {
@@ -163,14 +163,14 @@ describe('DecoratorParser', () => {
           protected() {}
         }
       `);
-      const classDecl = sourceFile.getClasses()[0];
-      const method = classDecl.getMethods()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
+      const method = classDecl.getMethods()[0]!;
 
       const result = parser.parseGuardDecorators(method);
 
       expect(result).toHaveLength(1);
-      expect(result[0].guards).toContain('AuthGuard');
-      expect(result[0].guards).toContain('RolesGuard');
+      expect(result[0]!.guards).toContain('AuthGuard');
+      expect(result[0]!.guards).toContain('RolesGuard');
     });
   });
 
@@ -187,13 +187,13 @@ describe('DecoratorParser', () => {
           publicRoute() {}
         }
       `);
-      const classDecl = sourceFile.getClasses()[0];
-      const method = classDecl.getMethods()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
+      const method = classDecl.getMethods()[0]!;
 
       const result = parser.parseMetadataDecorators(method, ['Public']);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Public');
+      expect(result[0]!.name).toBe('Public');
     });
 
     it('@Roles()デコレーターの値を抽出する', () => {
@@ -208,14 +208,14 @@ describe('DecoratorParser', () => {
           adminRoute() {}
         }
       `);
-      const classDecl = sourceFile.getClasses()[0];
-      const method = classDecl.getMethods()[0];
+      const classDecl = sourceFile.getClasses()[0]!;
+      const method = classDecl.getMethods()[0]!;
 
       const result = parser.parseMetadataDecorators(method, ['Roles']);
 
       expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Roles');
-      expect(result[0].value).toEqual(['admin', 'moderator']);
+      expect(result[0]!.name).toBe('Roles');
+      expect(result[0]!.value).toEqual(['admin', 'moderator']);
     });
   });
 });
